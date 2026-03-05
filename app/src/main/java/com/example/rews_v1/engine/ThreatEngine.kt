@@ -11,6 +11,8 @@ object ThreatEngine {
     private var riskScore = 0
     private val logs = mutableListOf<ThreatLog>()
 
+    private var alertActive = false
+
     // Main scan function
     fun runSecurityScan(context: Context) {
 
@@ -65,7 +67,9 @@ object ThreatEngine {
     // High risk alert trigger
     fun checkHighRisk(context: Context) {
 
-        if (riskScore >= 70) {
+        if (riskScore >= 70 && !alertActive) {
+
+            alertActive = true
 
             val intent = Intent(context, HighRiskAlertActivity::class.java)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -101,6 +105,10 @@ object ThreatEngine {
 
             else -> "HIGH"
         }
+    }
+
+    fun resetAlert() {
+        alertActive = false
     }
 
     fun getLogs(): List<ThreatLog> = logs
