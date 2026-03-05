@@ -10,6 +10,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
+import com.example.rews_v1.engine.CPUMonitor
 import com.example.rews_v1.engine.ThreatEngine
 
 class MonitoringService : Service() {
@@ -20,6 +21,9 @@ class MonitoringService : Service() {
         super.onCreate()
 
         startMonitoringNotification()
+
+        startCPUMonitor()
+
         startMonitoringLoop()
     }
 
@@ -28,6 +32,7 @@ class MonitoringService : Service() {
         val channelId = "rews_monitor_channel"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
             val channel = NotificationChannel(
                 channelId,
                 "REWS Monitoring",
@@ -35,15 +40,17 @@ class MonitoringService : Service() {
             )
 
             val manager = getSystemService(NotificationManager::class.java)
+
             manager.createNotificationChannel(channel)
         }
 
-        val notification: Notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("REWS Monitoring Active")
-            .setContentText("Monitoring ransomware activity...")
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
+        val notification: Notification =
+            NotificationCompat.Builder(this, channelId)
+                .setContentTitle("REWS Monitoring Active")
+                .setContentText("Monitoring ransomware activity...")
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .build()
 
         startForeground(1, notification)
     }
@@ -61,8 +68,33 @@ class MonitoringService : Service() {
         })
     }
 
+    private fun startCPUMonitor() {
+
+        CPUMonitor.start { cpu ->
+
+            if (cpu > 80) {
+
+                ThreatEngine.reportThreat(
+                    "HIGH",
+                    "High CPU usage detected ($cpu%)",
+                    30
+                )
+            }
+        }
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+
         return START_STICKY
+    }
+
+    override fun onDestroy() {
+
+        CPUMonitor.stop()
+
+        handler.removeCallbacksAndMessages(null)
+
+        super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? {
