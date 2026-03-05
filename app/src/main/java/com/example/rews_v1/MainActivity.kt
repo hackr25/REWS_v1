@@ -1,9 +1,9 @@
 package com.example.rews_v1
 
+import android.Manifest
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.example.rews_v1.service.MonitoringService
@@ -14,22 +14,18 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    override fun onStart() {
-        super.onStart()
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
         setContentView(R.layout.activity_main)
+
+        requestAppPermissions()
 
         loadFragment(DashboardFragment())
 
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_navigation)
 
-        val intent = Intent(this, MonitoringService::class.java)
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
-        }
+        startMonitoringService()
 
         bottomNav.setOnItemSelectedListener {
             when (it.itemId) {
@@ -41,7 +37,35 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun requestAppPermissions() {
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+
+            requestPermissions(
+                arrayOf(
+                    Manifest.permission.READ_MEDIA_IMAGES,
+                    Manifest.permission.READ_MEDIA_VIDEO,
+                    Manifest.permission.READ_MEDIA_AUDIO,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ),
+                100
+            )
+        }
+    }
+
+    private fun startMonitoringService() {
+
+        val intent = Intent(this, MonitoringService::class.java)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+    }
+
     private fun loadFragment(fragment: Fragment) {
+
         supportFragmentManager.beginTransaction()
             .replace(R.id.nav_host_fragment, fragment)
             .commit()
