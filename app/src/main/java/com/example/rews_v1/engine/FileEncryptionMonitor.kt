@@ -8,15 +8,20 @@ class FileEncryptionMonitor(
     private val callback: (String) -> Unit
 ) : FileObserver(path, CREATE or MODIFY) {
 
+    private val suspiciousExtensions =
+        listOf("enc", "locked", "crypt", "crypto", "aes")
+
     override fun onEvent(event: Int, file: String?) {
 
         if (file == null) return
 
-        val extension = File(file).extension.lowercase()
+        val fullPath = "$path/$file"
 
-        if (extension in listOf("enc","locked","crypt","crypto","aes")) {
+        val extension = File(fullPath).extension.lowercase()
 
-            callback("Encrypted file detected: $file")
+        if (extension in suspiciousExtensions) {
+
+            callback("Possible encrypted file detected: $file")
         }
     }
 }

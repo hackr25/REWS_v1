@@ -11,16 +11,23 @@ import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
 import com.example.rews_v1.engine.CPUMonitor
+import com.example.rews_v1.engine.FileEncryptionMonitor
+import com.example.rews_v1.engine.RenamePatternDetector
 import com.example.rews_v1.engine.ThreatEngine
 
 class MonitoringService : Service() {
 
     private val handler = Handler(Looper.getMainLooper())
 
+    private lateinit var encryptionMonitor: FileEncryptionMonitor
+    private lateinit var renameMonitor: RenamePatternDetector
+
     override fun onCreate() {
         super.onCreate()
 
         startMonitoringNotification()
+
+        startFileMonitors()
 
         startCPUMonitor()
 
@@ -83,6 +90,32 @@ class MonitoringService : Service() {
         }
     }
 
+    private fun startFileMonitors() {
+
+        val path = "/storage/emulated/0/Download"
+
+        encryptionMonitor = FileEncryptionMonitor(path) {
+
+            ThreatEngine.reportThreat(
+                "HIGH",
+                it,
+                40
+            )
+        }
+
+        renameMonitor = RenamePatternDetector(path) {
+
+            ThreatEngine.reportThreat(
+                "HIGH",
+                it,
+                35
+            )
+        }
+
+        encryptionMonitor.startWatching()
+        renameMonitor.startWatching()
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 
         return START_STICKY
@@ -91,6 +124,9 @@ class MonitoringService : Service() {
     override fun onDestroy() {
 
         CPUMonitor.stop()
+
+        encryptionMonitor.stopWatching()
+        renameMonitor.stopWatching()
 
         handler.removeCallbacksAndMessages(null)
 
