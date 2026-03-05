@@ -11,7 +11,12 @@ import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
 import com.example.rews_v1.engine.CPUMonitor
+import com.example.rews_v1.engine.FileActivityMonitor
 import com.example.rews_v1.engine.FileEncryptionMonitor
+import com.example.rews_v1.engine.NetworkMonitor
+import com.example.rews_v1.engine.PermissionMonitor
+import com.example.rews_v1.engine.ProcessMonitor
+import com.example.rews_v1.engine.RansomNoteDetector
 import com.example.rews_v1.engine.RenamePatternDetector
 import com.example.rews_v1.engine.ThreatEngine
 
@@ -70,6 +75,10 @@ class MonitoringService : Service() {
 
                 ThreatEngine.runSecurityScan(applicationContext)
 
+                checkPermissionAbuse()
+                checkNetworkUsage()
+                checkProcessActivity()
+
                 handler.postDelayed(this, 5000)
             }
         })
@@ -94,16 +103,43 @@ class MonitoringService : Service() {
 
         val path = "/storage/emulated/0/Download"
 
-        encryptionMonitor = FileEncryptionMonitor(path) {
+        encryptionMonitor = FileEncryptionMonitor(path) { fileName ->
+
+            if (FileActivityMonitor.registerEvent()) {
+
+                ThreatEngine.reportThreat(
+                    "HIGH",
+                    "Mass file activity detected",
+                    35
+                )
+            }
+
+            if (RansomNoteDetector.isRansomNote(fileName)) {
+
+                ThreatEngine.reportThreat(
+                    "HIGH",
+                    "Possible ransom note detected: $fileName",
+                    45
+                )
+            }
 
             ThreatEngine.reportThreat(
                 "HIGH",
-                it,
+                "Encrypted file extension detected: $fileName",
                 40
             )
         }
 
         renameMonitor = RenamePatternDetector(path) {
+
+            if (FileActivityMonitor.registerEvent()) {
+
+                ThreatEngine.reportThreat(
+                    "HIGH",
+                    "Mass file rename activity detected",
+                    35
+                )
+            }
 
             ThreatEngine.reportThreat(
                 "HIGH",
@@ -114,6 +150,48 @@ class MonitoringService : Service() {
 
         encryptionMonitor.startWatching()
         renameMonitor.startWatching()
+    }
+
+    private fun checkPermissionAbuse() {
+
+        val suspicious = PermissionMonitor.scanInstalledApps(applicationContext)
+
+        if (suspicious) {
+
+            ThreatEngine.reportThreat(
+                "MEDIUM",
+                "Suspicious permission combination detected",
+                20
+            )
+        }
+    }
+
+    private fun checkNetworkUsage() {
+
+        val usage = NetworkMonitor.checkNetworkUsage()
+
+        if (usage > 5_000_000) {
+
+            ThreatEngine.reportThreat(
+                "MEDIUM",
+                "Abnormal network traffic detected",
+                25
+            )
+        }
+    }
+
+    private fun checkProcessActivity() {
+
+        val processes = ProcessMonitor.checkProcesses(applicationContext)
+
+        if (processes > 150) {
+
+            ThreatEngine.reportThreat(
+                "MEDIUM",
+                "Unusual number of running processes",
+                20
+            )
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
