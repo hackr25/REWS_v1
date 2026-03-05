@@ -1,10 +1,12 @@
 package com.example.rews_v1.engine
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 
 object PermissionMonitor {
 
+    @SuppressLint("QueryPermissionsNeeded")
     fun scanInstalledApps(context: Context): Boolean {
 
         val pm = context.packageManager
